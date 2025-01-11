@@ -1,7 +1,7 @@
 name: Build Electron App
 
 on:
-  workflow_dispatch: # Allows manual triggering of the workflow
+  workflow_dispatch:
     inputs:
       platform:
         description: 'Select platform to build for'
@@ -15,11 +15,9 @@ on:
 
 jobs:
   build:
-    name: Build Electron App
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
         include:
           - os: ubuntu-latest
             platform: linux
@@ -29,28 +27,25 @@ jobs:
             platform: win
 
     steps:
-      # Checkout the repository
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      # Set up Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20.x' # Latest stable version
+          node-version: '20.x'
 
-      # Install dependencies
-      - name: Install Dependencies
+      - name: Install dependencies
         run: npm ci
 
-      # Build the Electron app
       - name: Build Electron App
-        run: npm run build:${{ inputs.platform }}
-        if: ${{ matrix.platform == inputs.platform || inputs.platform == 'all' }}
+        run: npm run build:${{ matrix.platform }}
+        env:
+          GH_TOKEN: dummy_token # Prevent GitHub publishing warnings
 
-      # Upload build artifacts
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: electron-app-${{ matrix.platform }}
+          name: build-${{ matrix.platform }}
           path: dist/
+        if: always()
