@@ -5,25 +5,37 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
-
-permissions:
-  contents: write
-  packages: write
-  issues: write
+    inputs:
+      platform:
+        description: 'Platform to build for'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - macos
+          - windows
+          - linux
 
 jobs:
   build:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
         include:
           - os: macos-latest
+            platform: macos
             build_command: npm run build:mac
           - os: ubuntu-latest
+            platform: linux
             build_command: npm run build:linux
           - os: windows-latest
+            platform: windows
             build_command: npm run build:win
+    if: >-
+      github.event.inputs.platform == 'all' ||
+      github.event.inputs.platform == matrix.platform ||
+      github.event_name == 'push'
 
     runs-on: ${{ matrix.os }}
 
@@ -37,21 +49,25 @@ jobs:
           node-version: 16
           cache: 'npm'
 
-      - name: Add author field (Windows)
+      - name: Update version and add author field (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $json = Get-Content package.json | ConvertFrom-Json
-          $json.author = @{
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $packageJson = Get-Content package.json -Raw | ConvertFrom-Json
+          $packageJson.version = $version
+          Add-Member -InputObject $packageJson -NotePropertyName "author" -NotePropertyValue @{
             name = "Video Dimmer Team"
             email = "videodimmer@example.com"
-          }
-          $json | ConvertTo-Json -Depth 32 | Set-Content package.json
+          } -Force
+          $packageJson | ConvertTo-Json -Depth 32 | Set-Content package.json
 
-      - name: Add author field (Unix)
+      - name: Update version and add author field (Unix)
         if: matrix.os != 'windows-latest'
         run: |
-          node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync("package.json")); p.author={name:"Video Dimmer Team", email:"videodimmer@example.com"}; fs.writeFileSync("package.json", JSON.stringify(p, null, 2))'
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync("package.json")); p.version=process.env.VERSION; p.author={name:"Video Dimmer Team", email:"videodimmer@example.com"}; fs.writeFileSync("package.json", JSON.stringify(p, null, 2))'
 
       - name: Install dependencies
         run: npm install
