@@ -32,12 +32,13 @@ jobs:
           - os: windows-latest
             platform: windows
             build_command: npm run build:win
-    if: >-
-      github.event.inputs.platform == 'all' ||
-      github.event.inputs.platform == matrix.platform ||
-      github.event_name == 'push'
-
     runs-on: ${{ matrix.os }}
+
+    # Check if we should run this job based on the input or if it's a tag push
+    if: |
+      github.event_name == 'push' ||
+      github.event.inputs.platform == 'all' ||
+      github.event.inputs.platform == matrix.platform
 
     steps:
       - name: Check out Git repository
