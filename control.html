@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      body {
+        padding: 20px;
+        font-family: system-ui;
+        background: #f5f5f5;
+        color: #333;
+      }
+      .container {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        max-width: 450px;
+        margin: 0 auto;
+      }
+      .control-group {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .display-select {
+        margin-top: 10px;
+      }
+      .display-option {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+      }
+      input[type='range'] {
+        width: 100%;
+      }
+      .color-picker {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .color-value {
+        font-family: monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="enableOverlay" />
+          Enable Overlay
+        </label>
+      </div>
+
+      <div class="control-group">
+        <label>Select Displays to Dim:</label>
+        <div id="displayOptions" class="display-select">
+          <!-- Display checkboxes will be added here -->
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label> Darkness Level: <span id="opacityValue">30%</span> </label>
+        <input
+          type="range"
+          id="opacity"
+          min="0"
+          max="100"
+          step="5"
+          value="30"
+        />
+      </div>
+
+      <div class="control-group">
+        <label> Overlay Color: </label>
+        <div class="color-picker">
+          <input type="color" id="color" value="#000000" />
+          <span id="colorValue" class="color-value">#000000</span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { ipcRenderer } = require('electron')
+
+      const enableCheckbox = document.getElementById('enableOverlay')
+      const displayOptions = document.getElementById('displayOptions')
+      const opacitySlider = document.getElementById('opacity')
+      const opacityValue = document.getElementById('opacityValue')
+      const colorPicker = document.getElementById('color')
+      const colorValue = document.getElementById('colorValue')
+
+      let activeDisplays = []
+
+      ipcRenderer.on('init-settings', (event, settings) => {
+        enableCheckbox.checked = settings.enabled
+        opacitySlider.value = settings.opacity * 100
+        opacityValue.textContent = `${Math.round(settings.opacity * 100)}%`
+        colorPicker.value = settings.color
+        colorValue.textContent = settings.color
+        activeDisplays = settings.activeDisplays
+
+        // Create display checkboxes
+        displayOptions.innerHTML = settings.displays
+          .map(
+            (display) => `
+                <div class="display-option">
+                    <input type="checkbox" 
+                           id="display_${display.id}" 
+                           value="${display.id}"
+                           ${
+                             activeDisplays.includes(display.id)
+                               ? 'checked'
+                               : ''
+                           }>
+                    <label for="display_${display.id}">${display.name}</label>
+                </div>
+            `
+          )
+          .join('')
+
+        // Add event listeners to display checkboxes
+        document
+          .querySelectorAll('input[type="checkbox"][id^="display_"]')
+          .forEach((checkbox) => {
+            checkbox.addEventListener('change', updateSettings)
+          })
+      })
+
+      function updateSettings() {
+        activeDisplays = Array.from(
+          document.querySelectorAll(
+            'input[type="checkbox"][id^="display_"]:checked'
+          )
+        ).map((checkbox) => parseInt(checkbox.value))
+
+        const settings = {
+          enabled: enableCheckbox.checked,
+          opacity: opacitySlider.value / 100,
+          color: colorPicker.value,
+          activeDisplays: activeDisplays,
+        }
+
+        ipcRenderer.send('update-settings', settings)
+      }
+
+      enableCheckbox.addEventListener('change', updateSettings)
+
+      opacitySlider.addEventListener('input', (e) => {
+        opacityValue.textContent = `${e.target.value}%`
+        updateSettings()
+      })
+
+      colorPicker.addEventListener('input', (e) => {
+        colorValue.textContent = e.target.value
+        updateSettings()
+      })
+    </script>
+  </body>
+</html>
