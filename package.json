@@ -23,15 +23,16 @@
       "icon": "build/icon.icns"
     },
     "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "build/icon.ico"
+      "target": "nsis",
+      "nsis": {
+        "oneClick": false,
+        "allowToChangeInstallationDirectory": true,
+        "createDesktopShortcut": true,
+        "createStartMenuShortcut": true,
+        "installerIcon": "build/installerIcon.ico",
+        "uninstallerIcon": "build/uninstallerIcon.ico",
+        "compression": "store"
+      }
     },
     "linux": {
       "target": [
@@ -46,7 +47,8 @@
         "Comment": "Adjustable screen dimming utility",
         "Categories": "Utility;",
         "StartupWMClass": "video-dimmer"
-      }
+      },
+      "maintainer": "Your Name <your-email@example.com>"
     },
     "nsis": {
       "oneClick": false,
@@ -71,7 +73,7 @@
     "url": "git+https://github.com/konsoul/videodim.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "Your Name <your-email@example.com>",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/konsoul/videodim/issues"
