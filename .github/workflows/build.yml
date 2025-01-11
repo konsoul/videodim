@@ -37,9 +37,21 @@ jobs:
           node-version: 16
           cache: 'npm'
 
-      - name: Add author field to package.json
+      - name: Add author field (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
         run: |
-          contents="$(jq '.author="Video Dimmer Team"' package.json)" && echo "${contents}" > package.json
+          $json = Get-Content package.json | ConvertFrom-Json
+          $json.author = @{
+            name = "Video Dimmer Team"
+            email = "videodimmer@example.com"
+          }
+          $json | ConvertTo-Json -Depth 32 | Set-Content package.json
+
+      - name: Add author field (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync("package.json")); p.author={name:"Video Dimmer Team", email:"videodimmer@example.com"}; fs.writeFileSync("package.json", JSON.stringify(p, null, 2))'
 
       - name: Install dependencies
         run: npm install
@@ -61,6 +73,7 @@ jobs:
             dist/*.rpm
             dist/*.zip
           if-no-files-found: ignore
+          retention-days: 5
 
   create-release:
     needs: build
