@@ -67,10 +67,8 @@ function createOverlayForDisplay(display) {
   overlay.loadFile('overlay.html')
   overlay.setIgnoreMouseEvents(true)
 
-  // Apply platform-specific configurations
   platformConfig.setVisibility(overlay)
 
-  // Set always on top with platform-specific level
   const topLevel =
     process.platform === 'win32'
       ? 'screen-saver'
@@ -107,6 +105,15 @@ function updateOverlayVisibility(displayId, overlay) {
   }
 }
 
+function cleanupOverlays() {
+  overlayWindows.forEach((window) => {
+    if (!window.isDestroyed()) {
+      window.close()
+    }
+  })
+  overlayWindows.clear()
+}
+
 function createControlWindow() {
   controlWindow = new BrowserWindow({
     width: 500,
@@ -127,6 +134,17 @@ function createControlWindow() {
     }))
 
     controlWindow.webContents.send('init-settings', { ...settings, displays })
+  })
+
+  // Handle control window closure
+  controlWindow.on('closed', () => {
+    cleanupOverlays()
+    controlWindow = null
+
+    // Quit the app if it's not macOS
+    if (process.platform !== 'darwin') {
+      app.quit()
+    }
   })
 
   controlWindow.show()
@@ -160,7 +178,12 @@ ipcMain.on('update-settings', (event, newSettings) => {
   })
 })
 
-app.on('window-all-closed', (e) => {
+// Handle app quit
+app.on('before-quit', () => {
+  cleanupOverlays()
+})
+
+app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
