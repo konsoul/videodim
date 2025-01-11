@@ -33,14 +33,16 @@ jobs:
       - name: Build Electron app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ "${{ github.event.inputs.platform }}" == "mac" ]; then
-            npm run build:mac
-          elif [ "${{ github.event.inputs.platform }}" == "win" ]; then
-            npm run build:win
-          else
-            npm run build:linux
-          fi
+        shell: bash
+        run: npm run build:${{ github.event.inputs.platform }}
+        # run: |
+        #   if [ "${{ github.event.inputs.platform }}" == "mac" ]; then
+        #     npm run build:mac
+        #   elif [ "${{ github.event.inputs.platform }}" == "win" ]; then
+        #     npm run build:win
+        #   else
+        #     npm run build:linux
+        #   fi
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
