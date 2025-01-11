@@ -1,9 +1,14 @@
 // main.js
-const { app, BrowserWindow, screen, ipcMain } = require('electron')
+const {
+  app,
+  BrowserWindow,
+  screen,
+  ipcMain,
+  globalShortcut,
+} = require('electron')
 const Store = require('electron-store')
 const store = new Store()
 
-// Handle Windows squirrel events
 try {
   if (process.platform === 'win32' && require('electron-squirrel-startup'))
     app.quit()
@@ -136,12 +141,10 @@ function createControlWindow() {
     controlWindow.webContents.send('init-settings', { ...settings, displays })
   })
 
-  // Handle control window closure
   controlWindow.on('closed', () => {
     cleanupOverlays()
     controlWindow = null
 
-    // Quit the app if it's not macOS
     if (process.platform !== 'darwin') {
       app.quit()
     }
@@ -150,7 +153,6 @@ function createControlWindow() {
   controlWindow.show()
 }
 
-// Initialize app
 app.whenReady().then(() => {
   if (process.platform === 'linux') {
     app.setName('Video Dimmer')
@@ -161,6 +163,23 @@ app.whenReady().then(() => {
     createOverlayForDisplay(display)
   }
   createControlWindow()
+
+  // Register global shortcut
+  const shortcut =
+    process.platform === 'darwin' ? 'Command+Shift+D' : 'Control+Shift+D'
+  globalShortcut.register(shortcut, () => {
+    settings.enabled = !settings.enabled
+
+    if (controlWindow && !controlWindow.isDestroyed()) {
+      controlWindow.webContents.send('update-enabled-state', settings.enabled)
+    }
+
+    overlayWindows.forEach((overlay, displayId) => {
+      updateOverlayVisibility(displayId, overlay)
+    })
+
+    store.set('enabled', settings.enabled)
+  })
 })
 
 ipcMain.on('update-settings', (event, newSettings) => {
@@ -178,9 +197,16 @@ ipcMain.on('update-settings', (event, newSettings) => {
   })
 })
 
-// Handle app quit
+ipcMain.on('get-shortcut', (event) => {
+  event.reply(
+    'shortcut-info',
+    process.platform === 'darwin' ? 'Command+Shift+D' : 'Control+Shift+D'
+  )
+})
+
 app.on('before-quit', () => {
   cleanupOverlays()
+  globalShortcut.unregisterAll()
 })
 
 app.on('window-all-closed', () => {

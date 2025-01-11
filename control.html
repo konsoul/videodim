@@ -53,6 +53,7 @@
         <label>
           <input type="checkbox" id="enableOverlay" />
           Enable Overlay
+          <span id="shortcutInfo" style="color: #666; font-size: 0.9em"></span>
         </label>
       </div>
 
@@ -93,8 +94,22 @@
       const opacityValue = document.getElementById('opacityValue')
       const colorPicker = document.getElementById('color')
       const colorValue = document.getElementById('colorValue')
+      const shortcutInfo = document.getElementById('shortcutInfo')
 
       let activeDisplays = []
+
+      // Request shortcut info
+      ipcRenderer.send('get-shortcut')
+
+      // Listen for shortcut info
+      ipcRenderer.on('shortcut-info', (event, shortcut) => {
+        shortcutInfo.textContent = `(${shortcut})`
+      })
+
+      // Listen for enabled state updates from shortcut
+      ipcRenderer.on('update-enabled-state', (event, enabled) => {
+        enableCheckbox.checked = enabled
+      })
 
       ipcRenderer.on('init-settings', (event, settings) => {
         enableCheckbox.checked = settings.enabled
@@ -104,7 +119,6 @@
         colorValue.textContent = settings.color
         activeDisplays = settings.activeDisplays
 
-        // Create display checkboxes
         displayOptions.innerHTML = settings.displays
           .map(
             (display) => `
@@ -123,7 +137,6 @@
           )
           .join('')
 
-        // Add event listeners to display checkboxes
         document
           .querySelectorAll('input[type="checkbox"][id^="display_"]')
           .forEach((checkbox) => {
