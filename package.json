@@ -65,5 +65,16 @@
   "devDependencies": {
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/konsoul/videodim.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/konsoul/videodim/issues"
+  },
+  "homepage": "https://github.com/konsoul/videodim#readme"
 }
