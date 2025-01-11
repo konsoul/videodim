@@ -2,15 +2,31 @@ name: Build Electron App
 
 on:
   workflow_dispatch: # Allows manual triggering of the workflow
+    inputs:
+      platform:
+        description: 'Select platform to build for'
+        required: true
+        default: 'all'
+        options:
+          - all
+          - mac
+          - win
+          - linux
 
 jobs:
   build:
-    name: Build for ${{ matrix.os }}
+    name: Build Electron App
     runs-on: ${{ matrix.os }}
-
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: mac
+          - os: windows-latest
+            platform: win
 
     steps:
       # Checkout the repository
@@ -21,7 +37,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 23.6.0
+          node-version: '20.x' # Latest stable version
 
       # Install dependencies
       - name: Install Dependencies
@@ -29,17 +45,12 @@ jobs:
 
       # Build the Electron app
       - name: Build Electron App
-        run: npm run build
-
-      # Package the Electron app for the specific platform
-      - name: Package Electron App
-        run: npx electron-builder --${{ matrix.os == 'windows-latest' && 'win' || matrix.os == 'macos-latest' && 'mac' || 'linux' }}
-        env:
-          NODE_ENV: production
+        run: npm run build:${{ inputs.platform }}
+        if: ${{ matrix.platform == inputs.platform || inputs.platform == 'all' }}
 
       # Upload build artifacts
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: electron-app-${{ matrix.os }}
+          name: electron-app-${{ matrix.platform }}
           path: dist/
