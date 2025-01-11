@@ -6,6 +6,11 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  packages: write
+  issues: write
+
 jobs:
   build:
     strategy:
@@ -32,12 +37,16 @@ jobs:
           node-version: 16
           cache: 'npm'
 
+      - name: Add author field to package.json
+        run: |
+          contents="$(jq '.author="Video Dimmer Team"' package.json)" && echo "${contents}" > package.json
+
       - name: Install dependencies
         run: npm install
 
       - name: Build Electron app
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ${{ matrix.build_command }}
 
       - name: Upload artifacts
@@ -52,12 +61,13 @@ jobs:
             dist/*.rpm
             dist/*.zip
           if-no-files-found: ignore
-          retention-days: 5
 
   create-release:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
 
     steps:
       - name: Download all artifacts
