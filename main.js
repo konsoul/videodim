@@ -3,10 +3,17 @@ const { app, BrowserWindow, screen, ipcMain } = require('electron')
 const Store = require('electron-store')
 const store = new Store()
 
+// Handle Windows squirrel events
+try {
+  if (process.platform === 'win32' && require('electron-squirrel-startup'))
+    app.quit()
+} catch (e) {
+  // Squirrel startup check not available, skipping
+}
+
 let overlayWindows = new Map()
 let controlWindow = null
 
-// Initialize settings with default values
 const settings = {
   enabled: store.get('enabled', true),
   opacity: store.get('opacity', 0.3),
@@ -14,7 +21,33 @@ const settings = {
   activeDisplays: store.get('activeDisplays', []),
 }
 
+function getPlatformSpecificConfig() {
+  switch (process.platform) {
+    case 'win32':
+      return {
+        type: 'toolbar',
+        setVisibility: (window) => window.setSkipTaskbar(true),
+      }
+    case 'linux':
+      return {
+        type: 'dock',
+        setVisibility: (window) => {
+          window.setSkipTaskbar(true)
+          window.setAlwaysOnTop(true, 'pop-up-menu')
+        },
+      }
+    default: // macOS
+      return {
+        type: 'panel',
+        setVisibility: (window) =>
+          window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true }),
+      }
+  }
+}
+
 function createOverlayForDisplay(display) {
+  const platformConfig = getPlatformSpecificConfig()
+
   const overlay = new BrowserWindow({
     x: display.bounds.x,
     y: display.bounds.y,
@@ -23,7 +56,7 @@ function createOverlayForDisplay(display) {
     transparent: true,
     frame: false,
     alwaysOnTop: true,
-    type: 'panel', // This helps with window layering
+    type: platformConfig.type,
     hasShadow: false,
     webPreferences: {
       nodeIntegration: true,
@@ -33,10 +66,18 @@ function createOverlayForDisplay(display) {
 
   overlay.loadFile('overlay.html')
   overlay.setIgnoreMouseEvents(true)
-  overlay.setVisibleOnAllWorkspaces(true)
 
-  // Ensure overlay stays on top
-  overlay.setAlwaysOnTop(true, 'screen-saver')
+  // Apply platform-specific configurations
+  platformConfig.setVisibility(overlay)
+
+  // Set always on top with platform-specific level
+  const topLevel =
+    process.platform === 'win32'
+      ? 'screen-saver'
+      : process.platform === 'linux'
+      ? 'pop-up-menu'
+      : 'screen-saver'
+  overlay.setAlwaysOnTop(true, topLevel)
 
   overlay.webContents.on('did-finish-load', () => {
     overlay.webContents.send('apply-settings', settings)
@@ -54,7 +95,13 @@ function updateOverlayVisibility(displayId, overlay) {
 
   if (shouldShow) {
     overlay.show()
-    overlay.setAlwaysOnTop(true, 'screen-saver')
+    const topLevel =
+      process.platform === 'win32'
+        ? 'screen-saver'
+        : process.platform === 'linux'
+        ? 'pop-up-menu'
+        : 'screen-saver'
+    overlay.setAlwaysOnTop(true, topLevel)
   } else {
     overlay.hide()
   }
@@ -85,10 +132,13 @@ function createControlWindow() {
   controlWindow.show()
 }
 
+// Initialize app
 app.whenReady().then(() => {
-  const displays = screen.getAllDisplays()
-  console.log('Available displays:', displays)
+  if (process.platform === 'linux') {
+    app.setName('Video Dimmer')
+  }
 
+  const displays = screen.getAllDisplays()
   for (const display of displays) {
     createOverlayForDisplay(display)
   }
@@ -110,7 +160,6 @@ ipcMain.on('update-settings', (event, newSettings) => {
   })
 })
 
-// Prevent app from closing when all windows are closed
 app.on('window-all-closed', (e) => {
   if (process.platform !== 'darwin') {
     app.quit()
