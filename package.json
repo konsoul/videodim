@@ -8,7 +8,9 @@
     "build:mac": "electron-builder -m",
     "build:win": "electron-builder -w",
     "build:linux": "electron-builder -l",
-    "build:all": "electron-builder -mwl"
+    "build:all": "electron-builder -mwl",
+    "version": "git add -A",
+    "postversion": "git push && git push --tags"
   },
   "build": {
     "appId": "com.videodimmer.app",
@@ -20,17 +22,10 @@
         "dmg",
         "zip"
       ],
-      "icon": "build/icon.icns",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "publish": {
-        "provider": "github",
-        "owner": "konsoul",
-        "repo": "videodim"
-      }
+      "icon": "build/icon.icns"
     },
     "win": {
-      "target": "squirrel",
+      "target": "nsis",
       "icon": "build/icon.ico",
       "publish": {
         "provider": "github",
@@ -59,7 +54,6 @@
     }
   },
   "dependencies": {
-    "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^8.1.0"
   },
   "devDependencies": {

@@ -16,6 +16,7 @@ on:
 jobs:
   release:
     runs-on: ${{ github.event.inputs.platform == 'mac' && 'macos-latest' || github.event.inputs.platform == 'win' && 'windows-latest' || 'ubuntu-latest' }}
+
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
@@ -23,30 +24,32 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '23.6.0'
+          node-version: '20.11.0'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Electron app for ${{ github.event.inputs.platform }}
-        uses: samuelmeuli/action-electron-builder@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          platform: ${{ github.event.inputs.platform }}
-          # Add additional parameters for Windows and Linux build setups
-          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-
-          # Windows specific build parameters
-          windows_certs: ${{ secrets.WINDOWS_CERTS }}
-          windows_certs_password: ${{ secrets.WINDOWS_CERTS_PASSWORD }}
-
-          # macOS specific build parameters (for code signing)
-          mac_certs: ${{ secrets.MAC_CERTS }}
-          mac_certs_password: ${{ secrets.MAC_CERTS_PASSWORD }}
+      - name: Build Electron app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event.inputs.platform }}" == "mac" ]; then
+            npm run build:mac
+          elif [ "${{ github.event.inputs.platform }}" == "win" ]; then
+            npm run build:win
+          else
+            npm run build:linux
+          fi
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ github.event.inputs.platform }}
-          path: dist/
-        if: always()
+          path: |
+            dist/*.dmg
+            dist/*.exe
+            dist/*.deb
+            dist/*.rpm
+            dist/*.AppImage
+          if-no-files-found: error
