@@ -1,120 +1,45 @@
-name: Build Video Dimmer
+name: Build Electron App
 
 on:
-  push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
-    inputs:
-      platform:
-        description: 'Platform to build for'
-        required: true
-        default: 'all'
-        type: choice
-        options:
-          - all
-          - macos
-          - windows
-          - linux
+  workflow_dispatch: # Allows manual triggering of the workflow
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            platform: macos
-            build_command: npm run build:mac
-          - os: ubuntu-latest
-            platform: linux
-            build_command: npm run build:linux
-          - os: windows-latest
-            platform: windows
-            build_command: npm run build:win
+    name: Build for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
-    # Check if we should run this job based on the input or if it's a tag push
-    if: |
-      github.event_name == 'push' ||
-      github.event.inputs.platform == 'all' ||
-      github.event.inputs.platform == matrix.platform
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v4
+      # Checkout the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-      - name: Install Node.js
-        uses: actions/setup-node@v4
+      # Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: 16
-          cache: 'npm'
+          node-version: 23.6.0
 
-      - name: Update version and add author field (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          $version = "${{ github.ref_name }}".TrimStart('v')
-          $packageJson = Get-Content package.json -Raw | ConvertFrom-Json
-          $packageJson.version = $version
-          Add-Member -InputObject $packageJson -NotePropertyName "author" -NotePropertyValue @{
-            name = "Video Dimmer Team"
-            email = "videodimmer@example.com"
-          } -Force
-          $packageJson | ConvertTo-Json -Depth 32 | Set-Content package.json
+      # Install dependencies
+      - name: Install Dependencies
+        run: npm ci
 
-      - name: Update version and add author field (Unix)
-        if: matrix.os != 'windows-latest'
-        run: |
-          VERSION="${{ github.ref_name }}"
-          VERSION="${VERSION#v}"
-          node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync("package.json")); p.version=process.env.VERSION; p.author={name:"Video Dimmer Team", email:"videodimmer@example.com"}; fs.writeFileSync("package.json", JSON.stringify(p, null, 2))'
+      # Build the Electron app
+      - name: Build Electron App
+        run: npm run build
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build Electron app
+      # Package the Electron app for the specific platform
+      - name: Package Electron App
+        run: npx electron-builder --${{ matrix.os == 'windows-latest' && 'win' || matrix.os == 'macos-latest' && 'mac' || 'linux' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ${{ matrix.build_command }}
+          NODE_ENV: production
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      # Upload build artifacts
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.os }}-build
-          path: |
-            dist/*.exe
-            dist/*.dmg
-            dist/*.AppImage
-            dist/*.deb
-            dist/*.rpm
-            dist/*.zip
-          if-no-files-found: ignore
-          retention-days: 5
-
-  create-release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
-
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          draft: false
-          prerelease: false
-          files: |
-            **/*.exe
-            **/*.dmg
-            **/*.AppImage
-            **/*.deb
-            **/*.rpm
-            **/*.zip
-          generate_release_notes: true
+          name: electron-app-${{ matrix.os }}
+          path: dist/
