@@ -20,18 +20,22 @@
         "dmg",
         "zip"
       ],
-      "icon": "build/icon.icns"
+      "icon": "build/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "publish": {
+        "provider": "github",
+        "owner": "konsoul",
+        "repo": "videodim"
+      }
     },
     "win": {
-      "target": "nsis",
-      "nsis": {
-        "oneClick": false,
-        "allowToChangeInstallationDirectory": true,
-        "createDesktopShortcut": true,
-        "createStartMenuShortcut": true,
-        "installerIcon": "build/installerIcon.ico",
-        "uninstallerIcon": "build/uninstallerIcon.ico",
-        "compression": "store"
+      "target": "squirrel",
+      "icon": "build/icon.ico",
+      "publish": {
+        "provider": "github",
+        "owner": "konsoul",
+        "repo": "videodim"
       }
     },
     "linux": {
@@ -41,7 +45,7 @@
         "rpm"
       ],
       "category": "Utility",
-      "icon": "build/icons",
+      "icon": "build/icons/icon.png",
       "desktop": {
         "Name": "Video Dimmer",
         "Comment": "Adjustable screen dimming utility",
@@ -49,12 +53,6 @@
         "StartupWMClass": "video-dimmer"
       },
       "maintainer": "Your Name <your-email@example.com>"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
     },
     "directories": {
       "buildResources": "build"
