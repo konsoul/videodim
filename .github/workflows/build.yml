@@ -1,31 +1,48 @@
-name: Build Electron App
+name: Build/release
 
-on: push
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Select platform to build for (mac, win, linux)'
+        required: true
+        default: 'mac'
+        type: choice
+        options:
+          - mac
+          - win
+          - linux
 
 jobs:
   release:
     runs-on: ${{ matrix.os }}
-
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
-      - name: Install Node.js, NPM and Yarn
-        uses: actions/setup-node@v1
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 10
+          node-version: '23.6.0'
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Build/release Electron app
         uses: samuelmeuli/action-electron-builder@v1
         with:
-          # GitHub token, automatically provided to the action
-          # (No need to define this secret in the repo settings)
-          github_token: ${{ secrets.github_token }}
-
-          # If the commit is tagged with a version (e.g. "v1.0.0"),
-          # release the app after building
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          platform: ${{ github.event.inputs.platform }}
+          # Optional: Define the version number here if it's tagged
           release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-${{ matrix.os }}
+          path: dist/
+        if: always()
