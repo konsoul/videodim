@@ -17,7 +17,8 @@ This very simple app made with electron, creates a customizable screen that can 
 
 Here is a simple controller - change your color, select displays, enable/disable and of course control the intensity:
 
-![alt text](image.png)
+![image](https://github.com/user-attachments/assets/9aa83394-7a17-41f4-bc06-ab226ed7a11c)
+
  
 ## To Install
 Simply go to the Release section and download the .dmg and follow instructions
